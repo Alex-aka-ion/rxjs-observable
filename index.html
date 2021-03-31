@@ -1,0 +1,62 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Place favicon.ico in the root directory -->
+
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/main.css">
+
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+
+  <script src='https://unpkg.com/rxjs/bundles/rxjs.umd.min.js'></script>
+  <script>
+    const { fromEvent, of, iif, EMPTY } = rxjs;
+    const { ajax } = rxjs.ajax;
+    const { map, filter, debounceTime } = rxjs.operators;
+    const { mergeMap, switchMap } = rxjs.operators;
+
+    const inputEl = document.createElement('input');
+    document.body.appendChild(inputEl);
+
+    const ulEl = document.createElement('ul');
+    document.body.appendChild(ulEl);
+    ulEl.insertAdjacentHTML('beforeend', `<li>Type something to search...</li>`)
+
+    const inputElChange$ = fromEvent(inputEl, 'input');
+    const def$ = of([{name: 'Type something to search...'}]);
+    inputElChange$.pipe(
+            map(o => o.target.value),
+            debounceTime(100),
+            switchMap(o =>
+                    iif(
+                            () => o.trim() !== '',
+                            of(o).pipe(
+                                    map(o => new URLSearchParams({q: o})),
+                                    switchMap(o => ajax.getJSON(`http://localhost:7070/api/search?${o}`))
+                            ),
+                            def$
+                    )
+            ),
+    ).subscribe({
+      next: value => {
+        ulEl.innerHTML = '';
+        console.log('next', value);
+        value.forEach(o => ulEl.insertAdjacentHTML('beforeend', `<li>${o.name}</li>`));
+      },
+      error: error => console.error('error', error),
+      complete: () => console.info('complete'),
+    });
+
+  </script>
+</body>
+
+</html>
